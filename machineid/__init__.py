@@ -64,33 +64,50 @@ def id(winregistry: bool = True) -> str:
   """
 
   if platform == 'darwin':
+    print('found darwin')
     id = __exec__("ioreg -d2 -c IOPlatformExpertDevice | awk -F\\\" '/IOPlatformUUID/{print $(NF-1)}'")
   elif platform == 'win32' or platform == 'cygwin' or platform == 'msys':
+    print('found win32 | cygwin | mssys')
     if winregistry:
+      print('\t winregistry : YES')
       id = __reg__('HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Cryptography', 'MachineGuid')
     else:
+      print('\t winregistry : NO')
       id = __exec__("powershell.exe -ExecutionPolicy bypass -command (Get-CimInstance -Class Win32_ComputerSystemProduct).UUID")
     if not id:
+      print('\t\t win32 : NO')
       id = __exec__('wmic csproduct get uuid').split('\n')[2] \
                                               .strip()
   elif platform.startswith('linux'):
+    print('found linux')
+    print('\t checking /var/lib/dbus')
     id = __read__('/var/lib/dbus/machine-id')
     if not id:
+      print('\t checking /etc')
       id = __read__('/etc/machine-id')
     if not id:
+      print('\t checking /proc/self')
       cgroup = __read__('/proc/self/cgroup')
       if cgroup:
+        print('\t\t checking docker')        
         if 'docker' in cgroup:
+          print('\t\t found docker')        
           id = __exec__('head -1 /proc/self/cgroup | cut -d/ -f3')
     if not id:
+      print('\t checking mountinfo')
       mountinfo = __read__('/proc/self/mountinfo')
       if mountinfo:
+        print('\t\t checking docker')
         if 'docker' in mountinfo:
+          print('\t\t found docker')
           id = __exec__("grep 'systemd' /proc/self/mountinfo | cut -d/ -f3")
     if not id:
+      print('\t checking wsl')
       if 'microsoft' in uname().release: # wsl
+        print('\t\t found wsl')
         id = __exec__("powershell.exe -ExecutionPolicy bypass -command '(Get-CimInstance -Class Win32_ComputerSystemProduct).UUID'")
   elif platform.startswith('openbsd') or platform.startswith('freebsd'):
+    print('checking bsd')
     id = __read__('/etc/hostid')
     if not id:
       id = __exec__('kenv -q smbios.system.uuid')
